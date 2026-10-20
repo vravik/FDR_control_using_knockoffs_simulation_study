@@ -35,6 +35,14 @@ class Scenario:
         Distribution label for tables and figures.
     n : int
         Observations per repetition.
+    p : int
+        Number of covariates
+    A : float
+        Amplitude of signal covariates
+    k : int
+        Sparsity of model
+    rho : float
+        correlation between features
     dgp : object
         Frozen SciPy distribution providing rvs() and mean().
     """
@@ -42,6 +50,10 @@ class Scenario:
     scenario_id: int
     label: str
     n: int
+    p : int
+    A : float
+    k : int
+    rho : float
     dgp: object
 
 
