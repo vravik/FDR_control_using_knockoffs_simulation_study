@@ -15,7 +15,7 @@ import sklearn
 from threadpoolctl import threadpool_limits
 
 from .dgps import DGP_CLASSES
-from .methods import LAD, OLS
+from .methods import BHq, knockoff, knockoff_plus
 from .metrics import evaluate
 
 
@@ -53,42 +53,43 @@ class SimulationStudy:
     """Run the supplied scenario dictionary; choosing values is the caller's job.
 
     scenarios maps unique, filename-safe string IDs to dictionaries with
-    EXACTLY experiment ('A'/'B'), n (int), p (int), rho (float), and
-    error_distribution ('normal'/'laplace'). Assume 0 < p < n, 0 <= rho < 1,
-    at least two replicates, and nonnegative integer seed. Use stable IDs:
-    changing a scenario ID changes its random streams.
-
+    EXACTLY experiment ('A'/'B'/'C'), n (int), p (int), rho (float), k (int) and
+    rho (float), n_reps (int). Experiments vary in one target variable 
+    (sparsity / amplitude / correlation). Assume 0 < p < n,
+    0 <= rho < 1, 200 / 600 reps per experiment as in original study deisgn,
+    and nonnegative integer seed. 
+    Use stable IDs: changing a scenario ID changes its random streams.
     run() returns a DataFrame with len(methods)*len(scenarios)*n_reps rows.
     Each (study_id, scenario_id, rep, method) identifies one fit. rep is
-    zero-based; gamma=p/n. Error columns are realized losses, not MSEs.
+    zero-based; Metrics computed are false discovery rate and power.
     Every method receives the SAME dataset per replicate, with separate
     data and method streams. Failed fits remain as rows with NaN estimates
     and losses, status='failed', and a message. Warnings are also recorded.
 
+    % check this
     One completed scenario is a checkpoint batch: its NPZ stores estimates,
     truth, covariance, and method IDs; its CSV stores metrics and fit status.
     The CSV is published last and marks the batch complete. A rerun skips
     completed batches. An interruption during a scenario repeats that batch.
     """
 
-    def __init__(self, scenarios, n_reps=100, seed=20261020,
+    def __init__(self, scenarios, alpha = 0.2, seed=20261020,
                  out_dir="results/raw", methods=None):
-        self.scenarios, self.n_reps, self.seed = scenarios, n_reps, seed
+        self.scenarios, self.alpha, self.seed = scenarios, alpha, seed
         self.out_dir = Path(out_dir)
-        self.methods = [OLS(), LAD()] if methods is None else methods
+        self.methods = [BHq(), knockoff(), knockoff_plus()] if methods is None else methods
 
         root = Path(__file__).resolve().parents[1]
         files = [*sorted((root / "src").glob("*.py")),
                  root / "scenarios.py", root / "simulate.py"]
         self.config = {
-            "scenarios": scenarios, "n_reps": n_reps, "seed": seed,
+            "scenarios": scenarios, "seed": seed,
             ## update this
             "methods": [{"method": m.name, "class": type(m).__name__,
                          "settings": m.settings} for m in self.methods],
-
-            ## what is model??                         
-            "model": {"beta": "ones(p)/sqrt(p)", "covariance": "rho**abs(j-k)",
-                      "normal_errors": "N(0,1)", "laplace_scale": 1 / np.sqrt(2)},
+                    
+            "model": {"covariance": "rho**abs(j-k)",
+                      "normal_errors": "N(0,1)"},
 
             "rng": {"generator": "PCG64", "seed_sequence": "[seed, *SHA256_words]",
                     "label": "compact JSON [scenario_id, rep, task]",
@@ -112,18 +113,18 @@ class SimulationStudy:
             saved = pd.read_csv(checkpoint)
             saved["message"] = saved.message.fillna("")
             return saved
-        dgp = DGP_CLASSES['generator']( settings["n"], settings["p"])
+        dgp = DGP_CLASSES['generator'](settings["n"], settings["p"])
 
         # initialize the design matrix for the dgp; get rng with rep=-1
         dgp.setDesign(rng_for(self.seed, scenario_id, -1, "data"), 
                       settings['rho'])   
         
-        estimates = np.full((self.n_reps, len(self.methods), settings["p"]), np.nan)
+        estimates = np.full((settings['n_reps'], len(self.methods), settings["p"]), np.nan)
         rows = []
         
         ## given the scenario id, fix the generating class -- produce data by 
         ## sampling from generative model
-        for rep in range(self.n_reps):
+        for rep in range(settings['n_reps']):
             # simulate coefficients and data for given parameter settings
             data = dgp.generate(rng_for(self.seed, scenario_id, rep, "data"),
                                 settings['k'], settings['A'])
@@ -136,7 +137,8 @@ class SimulationStudy:
                     warnings.simplefilter("always")
                     try:
                         estimates[rep, j] = method.fit(
-                            data, rng_for(self.seed, scenario_id, rep, "method:" + method.name))
+                            data, self.alpha, rng_for(self.seed, scenario_id, rep,
+                                                       "method:" + method.name))
                     except Exception as error:
                         status = "failed"
                         message = f"{type(error).__name__}: {error}"
@@ -144,15 +146,13 @@ class SimulationStudy:
                 if message:
                     logging.warning("%s rep=%s %s: %s", scenario_id, rep, method.name, message)
                 rows.append({"study_id": self.study_id, "scenario_id": scenario_id,
-                             **settings, "gamma": settings["p"] / settings["n"],
-                             "rep": rep, "method": method.name,
+                             **settings, "rep": rep, "method": method.name,
                              **evaluate(estimates[rep, j], data), "status": status,
                              "message": message, "elapsed_seconds": perf_counter() - start})
         numeric = checkpoint.with_suffix(".npz")
         temporary = numeric.with_suffix(".npz.tmp")
         with temporary.open("wb") as stream:
             np.savez_compressed(stream, estimates=estimates, beta_true=dgp.beta,
-                                covariance=dgp.covariance,
                                 method_ids=np.array([m.name for m in self.methods]))
         temporary.replace(numeric)
         frame = pd.DataFrame(rows)
@@ -170,7 +170,7 @@ class SimulationStudy:
         results = pd.concat(frames, ignore_index=True)
         save_csv(results, self.study_dir / "runs.csv")
         save_csv(results, self.out_dir / "runs.csv")
-        design = pd.DataFrame([{"scenario_id": sid, **s, "gamma": s["p"] / s["n"]}
+        design = pd.DataFrame([{"scenario_id": sid, **s}
                                for sid, s in self.scenarios.items()])
         save_csv(design, self.out_dir / "design.csv")
         save_json(metadata, self.out_dir / "metadata.json")

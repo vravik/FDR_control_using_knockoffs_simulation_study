@@ -1,17 +1,19 @@
-"""Losses and one helper for Monte Carlo uncertainty in a paired ratio."""
+"""Losses and one helper for Monte Carlo uncertainty in a paired ratio.
+
+Since evaluation does not consider magnitude of recovered coefficient, we convert
+true beta to a binary vector 
+"""
 
 import numpy as np
 
 
 def evaluate(beta_hat, data):
-    """Realized squared losses, without averaging or dividing by p.
+    """Realized power and false discovery rates, without averaging"""
 
-    Prediction loss concerns the conditional mean at a new predictor with
-    the same covariance; it does not include new response noise.
-    """
-    difference = beta_hat - data["beta_true"]
-    return {"coefficient_error": float(difference @ difference),
-            "prediction_error": float(difference @ data["covariance"] @ difference)}
+    return {"fdp": np.dot(beta_hat, data['beta_true'] == 0) / 
+             beta_hat.sum(),
+            "power": np.dot(beta_hat, data['beta_true'] != 0) /
+            (data['beta_true']!=0).sum()}
 
 
 def paired_ratio(lad, ols):
