@@ -1,0 +1,66 @@
+"""Regression DGPs sharing the generate(rng) interface from Lecture 6.
+
+We only have one error distribution. 
+
+Design matrix depends on the rho parameter -- we sample this once for each 
+scenario-id. 
+Instances of the class vary in how beta is defined -- we pass these parameters 
+as inputs for the generate function
+"""
+
+
+from abc import ABC, abstractmethod
+
+import numpy as np
+
+
+class RegressionDGP(ABC):
+    """Gaussian predictors with variable feature correlations, randomly sampled 
+    beta, fixed error distribution.
+
+    n , p fixed. Rho defines correlation structure of features.
+    Parameters for generating regresison output include sparsity k, 
+    Amplitude A that are directly passed to generate method
+
+    Parameters satisfy 0 < p < n and 0 <= rho < 1. generate() takes a
+    NumPy Generator, arguments k, A and returns X, y, beta_true in a dictionary.
+    Array shapes are (n, p), (n,), (p,), (p, p), respectively.
+    """
+
+    def __init__(self, n, p):
+        self.n, self.p= n, p
+
+    @abstractmethod
+    def set_coef(self, rng, k, A):
+         """Return coefficients beta with sparsity k and Amplitude +/-A."""
+
+
+    def setDesign(self, rng, rho):
+        index = np.arange(self.p)
+        if(rho == 0):
+            covariance = np.identity(self.p)
+        else:
+            covariance = rho ** np.abs(index[:, None] - index[None, :])
+        factor = np.linalg.cholesky(covariance)
+        X = rng.normal(size=(self.n, self.p)) @ factor.T
+        self.X = X / np.linalg.norm(X, axis=0)
+                
+
+    def generate(self, rng, k, A):
+        indices = self.set_coef(rng, k, A)
+        return {"X": self.X, "y": self.X @ self.beta + rng.normal(size=self.n),
+                        "beta_true": self.beta, "indices_true" : indices}
+
+        
+        
+class FDRstudy(RegressionDGP):
+    def set_coef(self, rng, k, A):
+        indices = rng.choice(self.p, size = k, replace=False) # sample k indices
+        coef_sign = rng.choice([-1, 1], size = k)
+        self.beta = np.zeros(self.p)
+        self.beta[indices] = coef_sign * A
+        return indices
+
+
+
+DGP_CLASSES = {"generator": FDRstudy}
