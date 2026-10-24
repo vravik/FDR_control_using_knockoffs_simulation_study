@@ -41,8 +41,9 @@ FDR at a given nominal rate, and Power for recovering true positive signals. Eac
 Figure has two panels, reporting the mean FDR and mean power averaged across all
 trials while varying the chose parameter for the experiment.
 
-The starter uses 100 replicates and master seed 20261020. Identical commands
-resume completed scenario batches; code/configuration changes produce a
-new study ID. Scenario and replicate IDs identify stable, independent task
-streams. 
+The starter uses master seed 20261020. Number of replicates per experiment are
+set in make_scenarios, as authors use different numbers for each experiment.
+Identical commands resume completed scenario batches; code/configuration changes
+produce a new study ID. Scenario and replicate IDs identify stable, independent
+task streams. 
 

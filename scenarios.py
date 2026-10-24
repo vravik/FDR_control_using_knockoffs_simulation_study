@@ -23,7 +23,7 @@ def make_scenarios():
             'k' : k,
             'A' : 3.5,
             'rho' : 0,
-            'n_reps' : 10, 
+            'n_reps' : 20, 
             "error_distribution": "normal"
         }
 
@@ -35,7 +35,7 @@ def make_scenarios():
                 'k' : 30,
                 'A' : amplitude,
                 'rho' : 0, 
-                'n_reps' : 10, 
+                'n_reps' : 20, 
                 "error_distribution": "normal"
             }
         
@@ -48,7 +48,7 @@ def make_scenarios():
                 'k' : 30,
                 'A' : 3.5,
                 'rho' : correlation,
-                'n_reps' : 10, 
+                'n_reps' : 20, 
                 "error_distribution": "normal"
             }
         

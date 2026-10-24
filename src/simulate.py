@@ -7,6 +7,10 @@ from pathlib import Path
 import platform
 from time import perf_counter
 import warnings
+import argparse
+
+from scenarios import make_scenarios
+from src.utils import *
 
 import numpy as np
 np.seterr(divide="ignore", over="ignore", invalid="ignore")
@@ -20,7 +24,7 @@ from threadpoolctl import threadpool_limits
 from .dgps import DGP_CLASSES
 from .methods import BHq, knockoff, knockoff_plus
 from .metrics import evaluate
-from src.utils import *
+
 
 
 
@@ -56,7 +60,7 @@ class SimulationStudy:
 
         root = Path(__file__).resolve().parents[1]
         files = [*sorted((root / "src").glob("*.py")),
-                 root / "scenarios.py", root / "simulate.py"]
+                 root / "scenarios.py"]
         self.config = {
             "scenarios": scenarios, "seed": seed,
             ## update this
@@ -143,3 +147,19 @@ class SimulationStudy:
         save_csv(design, self.out_dir / "design.csv")
         save_json(metadata, self.out_dir / "metadata.json")
         return results
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--alpha", type=float, default=0.2)
+    parser.add_argument("--seed", type=int, default=20261020)
+    parser.add_argument("--out", type=Path, default=Path("results/raw"))
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    study = SimulationStudy(make_scenarios(), alpha=args.alpha,
+                            seed=args.seed, out_dir=args.out)
+    results = study.run()
+    logging.info("Saved %s rows (%s) to %s", len(results), study.study_id, args.out)
+
+
+if __name__ == "__main__":
+    main()

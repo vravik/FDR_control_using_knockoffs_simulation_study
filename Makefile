@@ -21,7 +21,7 @@ setup: .setup_complete
 simulate: .simulation_complete
 
 .simulation_complete : .setup_complete
-	.venv/bin/$(PYTHON) simulate.py --seed $(SEED) --alpha $(ALPHA)
+	.venv/bin/$(PYTHON) -m src.simulate --seed $(SEED) --alpha $(ALPHA)
 	touch .simulation_complete
 
 analyze : .analysis_complete

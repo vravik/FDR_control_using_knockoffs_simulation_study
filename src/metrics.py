@@ -49,6 +49,25 @@ def summarize(runs):
         POWER_mcse=("power", lambda x: x.std(ddof=1) / np.sqrt(x.count())),
     )
 
+def figure_diagnostic(summary):
+    """diagnostic figure of distribution of FDR and power across tested methods."""
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+    for method, color in [("knockoff", "#0072B2"), ("knockoff+", "#D51900"),
+                        ("BHq", "black")]:
+        values = summary[summary.method == method]
+        for ax, metric in zip(axes, ["fdp", "power"]):
+            ax.hist(values[metric], color=color, bins=15, label = method, alpha = .5)
+        
+    axes[0].set_xlabel("FDP")
+    axes[1].set_xlabel("Power")
+    axes[0].axvline(x=0.2, color='red', linestyle='--', label='Target FDP')
+    for ax in axes:
+        ax.legend(frameon=False)
+
+    fig.text(0.5, 0.015, r"$n=3000$, $p=1000$, normal errors; histogram of targets", 
+                ha="center", fontsize=8)
+    fig.tight_layout(rect=(0, 0.065, 1, 1))
+    return fig
 
 def figure_a(summary):
     """Return a matplotlib Figure for the effect of varying coefficient sparsity.
@@ -144,15 +163,13 @@ def figure_c(summary):
     return fig
 
 
-
-
 def main():
     """Supplied driver: run stages separately without refitting methods."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", choices=["analyze", "figures", "all"], default="all")
     parser.add_argument("--input", type=Path, default=Path("results/raw/runs.csv"))
     parser.add_argument("--summary", type=Path, default=Path("results/summary.csv"))
-    parser.add_argument("--figure", choices=["A", "B", "C", "all"], default="all")
+    parser.add_argument("--figure", choices=["diagnostic", "A", "B", "C", "all"], default="all")
     parser.add_argument("--out", type=Path, default=Path("results/figures"))
     args = parser.parse_args()
     runs = pd.read_csv(args.input)
@@ -171,6 +188,12 @@ def main():
         save_json(provenance, args.summary.with_suffix(".metadata.json"))
     if args.stage in ["figures", "all"]:
         args.out.mkdir(parents=True, exist_ok=True)
+        if args.figure in ["diagnostic", "all"]:
+            summary = pd.read_csv(args.summary)
+            fig = figure_diagnostic(summary)
+            fig.savefig(args.out / "figure_diagnostic.png", dpi=300)
+            fig.savefig(args.out / "figure_diagnostic.pdf")
+            plt.close(fig)
         if args.figure in ["A", "all"]:
             summary = pd.read_csv(args.summary)
             fig = figure_a(summary)

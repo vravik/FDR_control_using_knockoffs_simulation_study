@@ -1,8 +1,8 @@
-# Mean tests under nonnormality
+# FDR CONTROL VIA KNOCKOFFS 
 
-An original simulation study comparing the Type I error of a one-sample
-t-test and an estimated-SE normal approximation. This is a compact worked
-example of the Unit 2 project, continuing the first three simulation demos.
+A simulation study to reproduce the simulation results from the study "Controlling 
+the  false discovery rate via knockoffs" by Barber, R.F and Candes, E.J. under 
+different regression scenarios
 
 ## Setup and run
 
@@ -13,16 +13,18 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 make test
-make all PYTHON=python
+make all PYTHON=python3
 ```
 
-The default budget is 1,000 repetitions in each of six conditions. The first
-complete run takes roughly 10-30 seconds on a typical laptop; cached reruns
-take only a few seconds. Runtime depends on the machine and library versions.
-For a quick 100-repetition demonstration, use:
+The study has three experiments, with varying number of replications. Default 
+number of replicates per experiment are 20 each, although the authors use 600, 
+200, 200 replications in their study design. Number of repetitions is set in 
+make_scanarios. The simulation takes a long time (about 2 hours with 10 
+repetitions per scenario). Analysis is instant. The entire pipeline can be run 
+by calling
 
 ```bash
-make all SIM_ARGS="--n-sim 100"
+make all
 ```
 
 ## Findings from the bundled default run
@@ -38,41 +40,32 @@ remains elevated; see `ANALYSIS.md` for estimates and Monte Carlo uncertainty.
 | --- | --- |
 | `config.json` | Central simulation and evaluation settings |
 | `src/dgps.py` | Frozen SciPy DGPs, scenarios, and task-based RNGs |
-| `src/methods.py` | Common mean-test interface and two methods |
+| `src/methods.py` | Common regression fitting interface and three methods |
 | `src/simulation.py` | Shared datasets, raw outputs, provenance, checkpoints |
-| `src/metrics.py` | Evaluation, paired comparisons, and both figures |
+| `src/metrics.py` | Evaluation, and scripts to generate three figures |
 | `tests/test_study.py` | Four focused standard-library unit tests |
-| `data/simulated/` | Optional dataset cache; unnecessary for these cheap DGPs |
+| `data/simulated/` | Dataset cache |
 | `results/raw/` | Study-specific CSVs, metadata, and source snapshots |
-| `results/summary.csv`, `results/paired.csv` | Derived tables |
-| `results/figures/` | Diagnostic PNG and main PNG/SVG |
+| `results/summary.csv` | Derived tables |
+| `results/figures/` | main PNG/PDF |
 | `ADEMP.md`, `ANALYSIS.md` | Design and critical interpretation |
 
-There are four source modules to show in class. Module, class, function, and
-method docstrings follow PEP 257: a concise summary, a blank line before
-details, and documentation of inputs, outputs, and relevant side effects.
-NumPy-style parameter sections are a formatting choice, not a PEP 257 rule.
-Try `help()` on `make_rng` or `MeanTest.test` to show that these are real
-docstrings rather than comments.
 
 ## Makefile targets
 
 | Command | Effect |
 | --- | --- |
-| `make all` | Generate raw results, summaries, and both visualizations |
+| `make all` | Generate raw results, summaries, and all visualizations |
 | `make simulate` | Run missing scenario batches and save raw outputs |
 | `make analyze` | Rebuild summaries from saved outputs; simulation batches are reused |
-| `make figures` | Rebuild summaries and diagnostic/main figures |
-| `make test` | Run the four tests with Python's `unittest` |
+| `make figures` | Rebuild summaries and main figures |
+| `make test` | Run tests with Python's `pytest` |
 | `make clean` | Delete generated raw results, tables, metadata, and figures |
 
-The tests use the standard library to keep setup small. The assignment prefers
-pytest but does not require it; this is an intentionally compact alternative.
-No parallelism or optimization is needed for this project.
 
 ## Reuse, checkpoints, and provenance
 
-Repeating the same command reuses the six scenario CSVs. Each file is a complete
+Repeating the same command reuses the scenario CSVs. Each file is a complete
 batch of repetitions for one condition, written to a temporary file and renamed
 when complete. If execution stops partway through a scenario, resume with the
 same command: completed scenarios are reused and the unfinished one is rerun.
@@ -91,18 +84,20 @@ stream. Each repetition generates one dataset; both methods receive copies
 of that dataset. Although these methods are deterministic, their shared
 interface can accommodate methods with internal randomness.
 
-Evaluation reads saved p-values. For example, change only the evaluation level:
+Targets are computed along with data generation. To change evaluation level, use:
 
 ```bash
-python3 -m src.metrics analyze --alpha 0.01
-python3 -m src.metrics figures
+python3 -m src.simulate --alpha 0.1
+python3 -m src.metrics --stage analyze
 ```
 
-These commands generate no datasets and run no tests of means. They overwrite
-the derived tables/figures, leaving raw outputs intact. Evaluation metadata and
-a snapshot of `metrics.py` record the metric code and alpha used. Run `make all`
-to restore the configured evaluation level. To use cached outputs from an older
-study, point `results/raw/latest.json` to its saved study ID.
+Since the output of each scenario is the fitted coefficients, the targets are tied
+to the data generation process itself. It is not possible to evaluate at a different
+nominal FDR threshold without running the methods on each data, and this is the 
+time-consuming task. The nominal FDR threshold is an intrinsic parameter of the 
+SimulationStudy class. Run `make all` to restore the configured evaluation level.
+To use cached outputs from an older study, point `results/raw/latest.json` to 
+its saved study ID.
 
 Failed fits remain in raw CSVs with status/messages and missing outputs.
 Warnings remain attached to their results. Summaries report failure counts
@@ -113,9 +108,6 @@ normally rather than being wrapped in a validation framework.
 ## Submission checklist
 
 This directory includes the implementation, all requested Makefile targets,
-two visualizations, tests, ADEMP, analysis, and setup/runtime/findings information.
-For an actual submission, put it in a public GitHub repository and provide that
-URL; upload `ANALYSIS.md` separately as requested. Creating this example does
-not publish a repository.
+three visualizations, tests, ADEMP, analysis, and setup/runtime/findings information.
 
 Documentation reference: [PEP 257](https://peps.python.org/pep-0257/).
