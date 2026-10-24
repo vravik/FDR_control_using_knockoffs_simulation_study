@@ -1,13 +1,25 @@
 PYTHON ?= python3
-SIM_ARGS ?=
+SEED ?= 20261021
+ALPHA ?= 0.2
 ANALYZE_ARGS ?=
 
 .PHONY: all simulate analyze figures clean test
 
+# setup environment and dependencies
+setup: .setup_complete
+
+.setup_complete: requirements.txt 
+	@echo "setting up the environment"
+	$(PYTHON) -m venv .venv	
+	./.venv/bin/python3 -m pip install --upgrade pip wheel setuptools
+	./.venv/bin/python3 -m pip install -r requirements.txt
+	touch .setup_complete
+	
 all: figures
 
 simulate:
-	$(PYTHON) -m src.simulation $(SIM_ARGS)
+	.venv/bin/$(PYTHON) simulate.py --seed $(SEED) --alpha $(ALPHA)
+
 
 analyze: simulate
 	$(PYTHON) -m src.metrics analyze $(ANALYZE_ARGS)

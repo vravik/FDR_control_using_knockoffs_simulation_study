@@ -1,94 +1,61 @@
-"""Implement two interchangeable tests of a population mean.
-
-MeanTest defines the common test(data, null_mean, rng) interface.
-TTest uses Student's t reference distribution; NormalApproxMeanTest uses
-normal tails with the same estimated standard error. METHODS maps the
-configuration names to these two methods.
-"""
+"""Estimators sharing a fit(data, rng) interface."""
 
 from abc import ABC, abstractmethod
 
 import numpy as np
-from scipy.stats import norm, ttest_1samp
+import statsmodels.api as sm
+from scipy import stats
+from knockpy.knockoff_filter import KnockoffFilter
+import knockpy.knockoff_stats as kstats
 
+class Method(ABC):
+    """Return a list of selected variables after controlling for false discovery
+    at the nominal rate alpha.
 
-class MeanTest(ABC):
-    """Define the interface and descriptors for a two-sided mean test.
-
-    Subclasses supply method_id, name, and test(). Stable integer method
-    IDs identify their random streams; names describe them in figures.
+    Each fit receives its own Generator. models are deterministic;
+    accepting rng keeps the interface usable for randomized estimators.
+    settings records every estimator option changed from its default.
     """
 
     @abstractmethod
-    def test(self, data, null_mean, rng):
-        """Return the estimated mean, SE, statistic, reference df, and p-value.
-
-        Parameters
-        ----------
-        data : numpy.ndarray
-            One-dimensional sample with at least two observations.
-        null_mean : float
-            Population mean under the null hypothesis.
-        rng : numpy.random.Generator
-            Stream for internal randomness; deterministic methods ignore it.
-
-        Returns
-        -------
-        dict
-            Numeric fields estimate, se, statistic, df, and p_value.
-            Infinite df denotes a normal reference distribution.
-        """
-        pass
+    def fit(self, data, alpha, rng):
+        """Fit a fresh estimator to data['X'] and data['y']."""
 
 
-class TTest(MeanTest):
-    """Override MeanTest.test with the one-sample Student's t-test.
+class BHq(Method):
+    name = "BHq"
+    settings = {}
 
-    method_id is 1 and name identifies the method in reports.
-    """
-
-    method_id = 1
-    name = "One-sample t-test"
-
-    def test(self, data, null_mean, rng):
-        """Return a two-sided t-test result using the MeanTest interface.
-
-        data, null_mean, and rng have the meanings documented in MeanTest.
-        Return its five numeric output fields; rng is accepted but unused.
-        """
-        fit = ttest_1samp(data, popmean=null_mean, alternative="two-sided")
-        return {
-            "estimate": float(np.mean(data)),
-            "se": float(np.std(data, ddof=1) / np.sqrt(len(data))),
-            "statistic": float(fit.statistic), "df": float(fit.df),
-            "p_value": float(fit.pvalue),
-        }
+    def fit(self, data, alpha, rng):
+        model = sm.OLS(data['y'], data['X']).fit()
+        pvals = model.pvalues
+        fdr = stats.false_discovery_control(pvals, method = 'BH')
+        return (fdr <= alpha).astype(int)
 
 
-class NormalApproxMeanTest(MeanTest):
-    """Override MeanTest.test with an estimated-SE normal approximation.
+class knockoff(Method):
+    name = "knockoff"
+    settings = {"ksampler": 'gaussian', 'fstat' : 'lasso',
+                "knockoff_kwargs" : {'method':'sdp',
+                                     'dsdp_warning':False}, 
 
-    method_id is 2 and name identifies the method in reports. This method
-    estimates the variance; it is not a known-variance z-test.
-    """
+                }
 
-    method_id = 2
-    name = "Normal approximation"
-
-    def test(self, data, null_mean, rng):
-        """Return a normal-tail result using the MeanTest interface.
-
-        data, null_mean, and rng have the meanings documented in MeanTest.
-        Return its five numeric output fields with df=inf. Use the sample
-        standard deviation (ddof=1); rng is accepted but unused.
-        """
-        estimate = float(np.mean(data))
-        se = float(np.std(data, ddof=1) / np.sqrt(len(data)))
-        statistic = (estimate - null_mean) / se
-        return {
-            "estimate": estimate, "se": se, "statistic": statistic,
-            "df": np.inf, "p_value": float(2 * norm.sf(abs(statistic))),
-        }
+    def fit(self, data, alpha, rng):
+        with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+            filter = KnockoffFilter(**self.settings) 
+            _ = filter.forward(data["X"],data["y"],fdr=alpha)
+            w = filter.W
+            thresh = kstats.data_dependent_threshhold(W=w, fdr=alpha, offset=0)
+            return (w >= thresh).astype(int)
 
 
-METHODS = {"t_test": TTest(), "normal_approximation": NormalApproxMeanTest()}
+class knockoff_plus(knockoff):
+    # offset is 1 by default; can just return output of the forward wrapper
+    name = 'knockoff+'
+
+    def fit(self, data, alpha, rng):
+        with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+            filter = KnockoffFilter(**self.settings)
+            rejections = (filter.forward(data["X"], data["y"],fdr = alpha)).astype(int) 
+            return rejections

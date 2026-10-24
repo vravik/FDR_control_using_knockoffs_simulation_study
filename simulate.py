@@ -10,7 +10,7 @@ from src.simulation import SimulationStudy
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--alpha", type=int, default=0.2)
+    parser.add_argument("--alpha", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=20261020)
     parser.add_argument("--out", type=Path, default=Path("results/raw"))
     args = parser.parse_args()

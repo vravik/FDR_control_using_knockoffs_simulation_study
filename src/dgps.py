@@ -1,102 +1,60 @@
-"""Define the simulation scenarios and their random streams.
+"""Regression DGPs sharing the generate(rng) interface from Lecture 6.
 
-Scenario stores a frozen SciPy distribution and its stable configuration ID.
-make_scenarios constructs the design from configuration dictionaries.
-make_rng constructs a NumPy Generator for one random task.
-RNG_PLAN, DATA, and METHOD describe the recorded stream assignment.
+We only have one error distribution. 
+
+Design matrix depends on the rho parameter -- we sample this once for each 
+scenario-id. 
+Instances of the class vary in how beta is defined -- we pass these parameters 
+as inputs for the generate function
+
+We can use the methods in the knockpy package to generate the design matrix and
+coefficients
 """
 
-from dataclasses import dataclass
+
+from abc import ABC, abstractmethod
 
 import numpy as np
-from scipy.stats import expon, lognorm, norm
-
-DATA, METHOD = 0, 1
-RNG_PLAN = {
-    "bit_generator": "PCG64",
-    "seed_sequence_entropy": [
-        "scenario_id", "replicate_id", "purpose_id", "method_id", "root_seed"
-    ],
-    "purposes": {"data": DATA, "method": METHOD},
-    "data_method_id": 0,
-    "replicate_ids": "zero-based",
-}
+import knockpy
 
 
-@dataclass(frozen=True)
-class Scenario:
-    """Store a data-generating condition without wrapping SciPy's sampler.
+class RegressionDGP(ABC):
+    """Gaussian predictors with variable feature correlations, randomly sampled 
+    beta, fixed error distribution.
 
-    Attributes
-    ----------
-    scenario_id : int
-        Stable ID for this configuration, independent of execution order.
-    label : str
-        Distribution label for tables and figures.
-    n : int
-        Observations per repetition.
-    p : int
-        Number of covariates
-    A : float
-        Amplitude of signal covariates
-    k : int
-        Sparsity of model
-    rho : float
-        correlation between features
-    dgp : object
-        Frozen SciPy distribution providing rvs() and mean().
+    n , p fixed. Rho defines correlation structure of features.
+    Parameters for generating regresison output include sparsity k, 
+    Amplitude A that are directly passed to generate method
+
+    Parameters satisfy 0 < p < n and 0 <= rho < 1. generate() takes a
+    NumPy Generator, arguments k, A and returns X, y, beta_true in a dictionary.
+    Array shapes are (n, p), (n,), (p,), (p, p), respectively.
     """
 
-    scenario_id: int
-    label: str
-    n: int
-    p : int
-    A : float
-    k : int
-    rho : float
-    dgp: object
+    def __init__(self, n, p):
+        self.n, self.p= n, p
+        self.beta = np.zeros(p)
+                
+    @abstractmethod
+    def generate(self, rng, rho, k, A):
+        """Return Design matrix and variables from the regression model."""
+        
 
+class normalDGP(RegressionDGP):
+    def generate(self, rng, rho, k, A):
+        index = np.arange(self.p)
+        if(rho == 0):
+            covariance = np.identity(self.p)
+        else:
+            covariance = rho ** np.abs(index[:, None] - index[None, :])
+        factor = np.linalg.cholesky(covariance)
+        X = rng.normal(size=(self.n, self.p)) @ factor.T
+        self.X = X / np.linalg.norm(X, axis=0)
+        indices = rng.choice(self.p, size = k, replace=False)
+        coef_sign = rng.choice([-1, 1], size = k)
+        self.beta = np.zeros(self.p)
+        self.beta[indices] = coef_sign * A
+        return {"X": self.X, "y": self.X @ self.beta + rng.normal(size=self.n),
+                "beta_true": self.beta, "covariance":covariance}
 
-def make_scenarios(settings):
-    """Return the scenarios specified by a simulation settings dictionary.
-
-    Parameters
-    ----------
-    settings : dict
-        The simulation section of config.json, including its scenario list.
-
-    Returns
-    -------
-    list of Scenario
-        Conditions with frozen distributions and their true means available.
-    """
-    distributions = {"normal": norm, "exponential": expon, "lognormal": lognorm}
-    return [
-        Scenario(item["scenario_id"], item["label"], item["n"],
-                 distributions[item["distribution"]](**item["parameters"]))
-        for item in settings["scenarios"]
-    ]
-
-
-def make_rng(root_seed, scenario_id, replicate_id, *, purpose_id, method_id=0):
-    """Return a generator identified by its random task, not execution order.
-
-    Parameters
-    ----------
-    root_seed : int
-        Recorded master seed for the study.
-    scenario_id, replicate_id : int
-        Stable scenario ID and zero-based repetition ID.
-    purpose_id : int
-        Keyword-only stream purpose: DATA (0) or METHOD (1).
-    method_id : int, optional
-        Keyword-only method ID; leave at zero for data streams.
-
-    Returns
-    -------
-    numpy.random.Generator
-        PCG64 stream initialized through SeedSequence. Use distinct,
-        nonnegative task IDs; do not assign IDs from list positions.
-    """
-    key = [scenario_id, replicate_id, purpose_id, method_id, root_seed]
-    return np.random.Generator(np.random.PCG64(np.random.SeedSequence(key)))
+DGP_CLASSES = {"normal": normalDGP}
