@@ -23,7 +23,8 @@ def make_scenarios():
             'k' : k,
             'A' : 3.5,
             'rho' : 0,
-            'n_reps' : 600
+            'n_reps' : 600, 
+            "error_distribution": "normal"
         }
 
     for amplitude in np.round(np.arange(2.8, 4.2, .1), 1):
@@ -34,7 +35,8 @@ def make_scenarios():
                 'k' : 30,
                 'A' : amplitude,
                 'rho' : 0, 
-                'n_reps' : 200
+                'n_reps' : 200, 
+                "error_distribution": "normal"
             }
         
 
@@ -46,7 +48,8 @@ def make_scenarios():
                 'k' : 30,
                 'A' : 3.5,
                 'rho' : correlation,
-                'n_reps' : 200
+                'n_reps' : 200, 
+                "error_distribution": "normal"
             }
         
 

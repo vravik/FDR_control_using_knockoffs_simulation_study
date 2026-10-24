@@ -114,11 +114,6 @@ class SimulationStudy:
             saved["message"] = saved.message.fillna("")
             return saved
         dgp = DGP_CLASSES['generator'](settings["n"], settings["p"])
-
-        # initialize the design matrix for the dgp; get rng with rep=-1
-        dgp.setDesign(rng_for(self.seed, scenario_id, -1, "data"), 
-                      settings['rho'])   
-        
         estimates = np.full((settings['n_reps'], len(self.methods), settings["p"]), np.nan)
         rows = []
         
@@ -127,9 +122,7 @@ class SimulationStudy:
         for rep in range(settings['n_reps']):
             # simulate coefficients and data for given parameter settings
             data = dgp.generate(rng_for(self.seed, scenario_id, rep, "data"),
-                                settings['k'], settings['A'])
-
-            # runs each method on the generated data 
+                                settings['rho'],settings['k'],settings['A'])
             for j, method in enumerate(self.methods):
                 start = perf_counter()
                 status, message = "ok", ""

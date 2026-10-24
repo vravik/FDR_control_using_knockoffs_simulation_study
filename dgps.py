@@ -34,15 +34,15 @@ class RegressionDGP(ABC):
     def __init__(self, n, p):
         self.n, self.p= n, p
         self.beta = np.zeros(p)
-
+                
     @abstractmethod
-    def set_coef(self, rng, k, A):
-         """Return coefficients beta with sparsity k and Amplitude +/-A."""
+    def generate(self, rng, rho, k, A):
+        """Return Design matrix and variables from the regression model."""
+        
 
-
-    def setDesign(self, rng, rho):
+class normalDGP(RegressionDGP):
+    def generate(self, rng, rho, k, A):
         index = np.arange(self.p)
-        # covariance = knockpy.dgp.AR1(p = self.p, rho = rho)
         if(rho == 0):
             covariance = np.identity(self.p)
         else:
@@ -50,23 +50,11 @@ class RegressionDGP(ABC):
         factor = np.linalg.cholesky(covariance)
         X = rng.normal(size=(self.n, self.p)) @ factor.T
         self.X = X / np.linalg.norm(X, axis=0)
-                
-
-    def generate(self, rng, k, A):
-        self.set_coef(rng, k, A)
-        return {"X": self.X, "y": self.X @ self.beta + rng.normal(size=self.n),
-                        "beta_true": self.beta}
-
-        
-        
-class FDRstudy(RegressionDGP):
-    def set_coef(self, rng, k, A):
-        # we want to use the specific rng, so doing this by hand instead of using
-        # knockpy method
-        indices = rng.choice(self.p, size = k, replace=False) # sample k indices
+        indices = rng.choice(self.p, size = k, replace=False)
         coef_sign = rng.choice([-1, 1], size = k)
         self.beta = np.zeros(self.p)
         self.beta[indices] = coef_sign * A
+        return {"X": self.X, "y": self.X @ self.beta + rng.normal(size=self.n),
+                "beta_true": self.beta}
 
-
-DGP_CLASSES = {"generator": FDRstudy}
+DGP_CLASSES = {"normal": normalDGP}
