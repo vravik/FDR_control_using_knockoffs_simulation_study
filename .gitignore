@@ -1,8 +1,0 @@
-.venv/
-__pycache__/
-*.pyc
-results/raw/
-results/figures/
-results/*.csv
-results/evaluation.json
-results/metrics_source.py
