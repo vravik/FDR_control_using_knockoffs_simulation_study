@@ -1,10 +1,10 @@
 {
-  "analysis_source_sha256": "8786e9e60dfdf2394b460430066e0230211563e09a299b5521f942754bacf2f7",
+  "analysis_source_sha256": "8ba21e052762e0db4ae7653ebb6df8ec3e55929c044248f2d9790fac2175c210",
   "environment": {
     "matplotlib": "3.11.2",
     "numpy": "2.5.4",
     "pandas": "3.1.0"
   },
-  "raw_input_sha256": "ecdbc0ab3e374d6fc520c3afa6b1ff367863935ae2e8140aa177e9c7c9af5d28",
+  "raw_input_sha256": "2f4065d9394c6e85a0c9621e402554f18e65268de351f845d70da5c847a4964e",
   "uncertainty": "error bars are +/-2 Monte Carlo standard errors; paired ratio in A"
 }

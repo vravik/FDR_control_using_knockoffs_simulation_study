@@ -27,6 +27,7 @@ class BHq(Method):
     settings = {}
 
     def fit(self, data, alpha, rng):
+        np.random.seed(rng.integers(0, 2**16))
         model = sm.OLS(data['y'], data['X']).fit()
         pvals = model.pvalues
         fdr = stats.false_discovery_control(pvals, method = 'BH')
@@ -43,6 +44,7 @@ class knockoff(Method):
 
     def fit(self, data, alpha, rng):
         with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+            np.random.seed(rng.integers(0, 2**16))
             filter = KnockoffFilter(**self.settings) 
             _ = filter.forward(data["X"],data["y"],fdr=alpha)
             w = filter.W
@@ -56,6 +58,7 @@ class knockoff_plus(knockoff):
 
     def fit(self, data, alpha, rng):
         with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+            np.random.seed(rng.integers(0, 2**16))
             filter = KnockoffFilter(**self.settings)
             rejections = (filter.forward(data["X"], data["y"],fdr = alpha)).astype(int) 
             return rejections

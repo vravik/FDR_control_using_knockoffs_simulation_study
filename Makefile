@@ -39,7 +39,7 @@ figures : .figures_complete
 
 
 test:
-	$(PYTHON) -m unittest discover -s tests -v
+	$(PYTHON) -m pytest tests -v
 
 clean:
 	rm -rf results/raw results/figures

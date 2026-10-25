@@ -19,6 +19,9 @@ from src.utils import *
 
 def evaluate(beta_hat, data):
     """Realized power and false discovery rates, without averaging"""
+    if np.isnan(beta_hat).any():
+        return{"fdp":np.nan, "power":np.nan}
+    
     rejections = beta_hat.sum()
     if(rejections == 0):
         return({'fdp' : 0, 
@@ -55,8 +58,8 @@ def figure_diagnostic(summary):
     for method, color in [("knockoff", "#0072B2"), ("knockoff+", "#D51900"),
                         ("BHq", "black")]:
         values = summary[summary.method == method]
-        for ax, metric in zip(axes, ["fdp", "power"]):
-            ax.hist(values[metric], color=color, bins=15, label = method, alpha = .5)
+        for ax, metric in zip(axes, ["FDP", "POWER"]):
+            ax.hist(values[metric + "_mean"], color=color, bins=15, label = method, alpha = .5)
         
     axes[0].set_xlabel("FDP")
     axes[1].set_xlabel("Power")

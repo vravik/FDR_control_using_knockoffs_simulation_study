@@ -40,8 +40,8 @@ class RegressionDGP(ABC):
         """Return Design matrix and variables from the regression model."""
         
 
-class normalDGP(RegressionDGP):
-    def generate(self, rng, rho, k, A):
+class NormalDGP(RegressionDGP):
+    def generate(self, rng, rho=0, k=10, A=3.5):
         index = np.arange(self.p)
         if(rho == 0):
             covariance = np.identity(self.p)
@@ -57,4 +57,4 @@ class normalDGP(RegressionDGP):
         return {"X": self.X, "y": self.X @ self.beta + rng.normal(size=self.n),
                 "beta_true": self.beta, "covariance":covariance}
 
-DGP_CLASSES = {"normal": normalDGP}
+DGP_CLASSES = {"normal": NormalDGP}
