@@ -32,7 +32,7 @@ analyze : .analysis_complete
 
 figures : .figures_complete
 
-.figures_complete: .analysis_complete
+.figures_complete: src/metrics.py .analysis_complete
 	$(PYTHON) -m src.metrics --stage figures
 	touch .figures_complete
 

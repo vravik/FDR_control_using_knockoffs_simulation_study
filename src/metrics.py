@@ -52,6 +52,15 @@ def summarize(runs):
         POWER_mcse=("power", lambda x: x.std(ddof=1) / np.sqrt(x.count())),
     )
 
+plt.rcParams.update({
+    'font.size': 8,          # General text size
+    'axes.labelsize': 8,     # x and y labels
+    'axes.titlesize': 8,     # Subplot titles (if any)
+    'xtick.labelsize': 8,    # x tick marks
+    'ytick.labelsize': 8,    # y tick marks
+    'legend.fontsize': 8     # Legends
+})
+
 def figure_diagnostic(summary):
     """diagnostic figure of distribution of FDR and power across tested methods."""
     fig, axes = plt.subplots(1, 2, figsize=(8, 4))
@@ -65,7 +74,7 @@ def figure_diagnostic(summary):
     axes[1].set_xlabel("Power")
     axes[0].axvline(x=0.2, color='red', linestyle='--', label='Target FDP')
     for ax in axes:
-        ax.legend(frameon=False)
+        ax.legend(frameon=True)
 
     fig.text(0.5, 0.015, r"$n=3000$, $p=1000$, normal errors; histogram of targets", 
                 ha="center", fontsize=8)
@@ -82,21 +91,24 @@ def figure_a(summary):
     formatting. Do not average replicate ratios or save files here.
     """
     data = summary[summary.experiment == "A"]
-    fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+    fig, axes = plt.subplots(1, 2, figsize=(6, 3.6))
     for method, color in [("knockoff", "#0072B2"), ("knockoff+", "#D51900"),
                            ("BHq", "black")]:
         values = data[data.method == method].sort_values("k")
         for ax, metric in zip(axes, ["FDP", "POWER"]):
             ax.errorbar(values.k, values[metric + "_mean"],
                         yerr=2 * values[metric + "_mcse"], marker="o", markersize=3.5,
-                        color=color, label=method, capsize=2.5, linewidth=1.2)
+                        color=color, label=method, capsize=1.5, linewidth=.75)
+    axes[0].axhline(y=0.2, color='gray', linestyle='--', label='Nominal level',
+                    linewidth=0.75)
     axes[0].set_ylabel("FDP")
     axes[1].set_ylabel("Power")
+    
 
     for ax in axes:
         ax.set_xlabel("Sparsity")
         ax.spines[["top", "right"]].set_visible(False)
-        ax.legend(frameon=False)
+        ax.legend(frameon=True)
     fig.text(0.5, 0.015, r"$n=3000$, $p=1000$, normal errors; bars show $\pm2$ " \
     "Monte Carlo SE",
                 ha="center", fontsize=8)
@@ -120,14 +132,16 @@ def figure_b(summary):
         for ax, metric in zip(axes, ["FDP", "POWER"]):
             ax.errorbar(values.A, values[metric + "_mean"],
                         yerr=2 * values[metric + "_mcse"], marker="o", markersize=3.5,
-                        color=color, label=method, capsize=2.5, linewidth=1.2)
+                        color=color, label=method, capsize=1.5, linewidth=.75)
+    axes[0].axhline(y=0.2, color='gray', linestyle='--', label='Nominal level',
+                    linewidth=0.75)
     axes[0].set_ylabel("FDP")
     axes[1].set_ylabel("Power")
 
     for ax in axes:
         ax.set_xlabel("Amplitude")
         ax.spines[["top", "right"]].set_visible(False)
-        ax.legend(frameon=False)
+        ax.legend(frameon=True)
     fig.text(0.5, 0.015, r"$n=3000$, $p=1000$, normal errors; bars show $\pm2$ " \
     "Monte Carlo SE",
                 ha="center", fontsize=8)
@@ -151,14 +165,16 @@ def figure_c(summary):
         for ax, metric in zip(axes, ["FDP", "POWER"]):
             ax.errorbar(values.rho, values[metric + "_mean"],
                         yerr=2 * values[metric + "_mcse"], marker="o", markersize=3.5,
-                        color=color, label=method, capsize=2.5, linewidth=1.2)
+                        color=color, label=method, capsize=1.5, linewidth=.75)
+    axes[0].axhline(y=0.2, color='gray', linestyle='--', label='Nominal level',
+                    linewidth=0.75)
     axes[0].set_ylabel("FDP")
     axes[1].set_ylabel("Power")
 
     for ax in axes:
-        ax.set_xlabel(r"$\rho")
+        ax.set_xlabel(r"Feature correlation $\rho$")
         ax.spines[["top", "right"]].set_visible(False)
-        ax.legend(frameon=False)
+        ax.legend(frameon=True)
     fig.text(0.5, 0.015, r"$n=3000$, $p=1000$, normal errors; bars show $\pm2$ " \
     "Monte Carlo SE",
                 ha="center", fontsize=8)
