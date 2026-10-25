@@ -35,8 +35,8 @@ class SimulationStudy:
     EXACTLY experiment ('A'/'B'/'C'), n (int), p (int), rho (float), k (int) and
     rho (float), n_reps (int). Experiments vary in one target variable 
     (sparsity / amplitude / correlation). Assume 0 < p < n,
-    0 <= rho < 1, 200 / 600 reps per experiment as in original study deisgn,
-    and nonnegative integer seed. 
+    0 <= rho < 1, number of replicates per experiment are specified in scenario
+    dictionary and nonnegative integer seed. 
     Use stable IDs: changing a scenario ID changes its random streams.
     run() returns a DataFrame with len(methods)*len(scenarios)*n_reps rows.
     Each (study_id, scenario_id, rep, method) identifies one fit. rep is
@@ -44,10 +44,8 @@ class SimulationStudy:
     Every method receives the SAME dataset per replicate, with separate
     data and method streams. Failed fits remain as rows with NaN estimates
     and losses, status='failed', and a message. Warnings are also recorded.
-
-    % check this
     One completed scenario is a checkpoint batch: its NPZ stores estimates,
-    truth, covariance, and method IDs; its CSV stores metrics and fit status.
+    truth, and method IDs; its CSV stores metrics and fit status.
     The CSV is published last and marks the batch complete. A rerun skips
     completed batches. An interruption during a scenario repeats that batch.
     """

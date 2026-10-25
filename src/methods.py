@@ -1,4 +1,4 @@
-"""Estimators sharing a fit(data, rng) interface."""
+"""Estimators sharing a fit(data, alpha, rng) interface."""
 
 from abc import ABC, abstractmethod
 

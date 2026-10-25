@@ -1,7 +1,7 @@
 """Helper to compute false discovery rates and power of tested methods and
 their monte carlo uncertainty. Since evaluation does not consider magnitude of 
-recovered coefficient, we convert true beta to a binary vector. Also provides
-helpers to aggregate raw results and create three scientific comparison figures.
+recovered coefficient, we convert true beta to a binary vector. 
+Helpers to aggregate raw results and create three scientific comparison figures.
 """
 
 import numpy as np

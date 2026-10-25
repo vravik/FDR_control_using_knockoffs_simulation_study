@@ -1,21 +1,16 @@
-"""Regression DGPs sharing the generate(rng) interface from Lecture 6.
+"""Regression DGPs sharing the generate(rng) interface.
 
 We only have one error distribution. 
 
-Design matrix depends on the rho parameter -- we sample this once for each 
-scenario-id. 
-Instances of the class vary in how beta is defined -- we pass these parameters 
-as inputs for the generate function
-
-We can use the methods in the knockpy package to generate the design matrix and
-coefficients
+Design matrix depends on the rho parameter that controls covariate correlations.
+Instances of the class vary in how the regression coefficients are defined -- 
+we pass these parameters as inputs for the generate function
 """
 
 
 from abc import ABC, abstractmethod
 
 import numpy as np
-import knockpy
 
 
 class RegressionDGP(ABC):
