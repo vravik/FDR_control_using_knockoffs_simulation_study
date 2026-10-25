@@ -108,6 +108,7 @@ normally rather than being wrapped in a validation framework.
 ## Submission checklist
 
 This directory includes the implementation, all requested Makefile targets,
-three visualizations, tests, ADEMP, analysis, and setup/runtime/findings information.
+four visualizations (one diagnostic), tests, ADEMP, analysis, 
+and setup/runtime/findings information.
 
 Documentation reference: [PEP 257](https://peps.python.org/pep-0257/).
